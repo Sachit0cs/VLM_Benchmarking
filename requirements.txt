@@ -1,0 +1,56 @@
+# Python dependencies for VLM-ARB
+
+# Core
+python>=3.10
+
+# Image processing and attacks
+Pillow>=9.0.0
+opencv-python>=4.6.0
+numpy>=1.23.0
+scipy>=1.9.0
+
+# Deep learning & models
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.30.0
+accelerate>=0.20.0
+
+# Attack libraries
+torchattacks>=0.4.0
+foolbox>=2.4.0
+adversarial-robustness-toolbox>=1.15.0
+
+# VLM APIs
+openai>=1.0.0
+anthropic>=0.3.0
+
+# Evaluation & comparison
+sentence-transformers>=2.2.0
+rouge-score>=0.1.1
+pandas>=1.5.0
+scikit-learn>=1.2.0
+
+# Reporting & visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+reportlab>=4.0.0
+jinja2>=3.1.0
+plotly>=5.13.0
+
+# Data handling & utilities
+pyyaml>=6.0
+python-dotenv>=0.21.0
+loguru>=0.7.0
+tqdm>=4.65.0
+
+# UI (optional)
+gradio>=3.35.0
+streamlit>=1.25.0
+
+# Development
+pytest>=7.3.0
+jupyter>=1.0.0
+ipython>=8.12.0
+
+# Quantization (optional, for GPU models)
+bitsandbytes>=0.39.0

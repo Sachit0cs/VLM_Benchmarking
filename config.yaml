@@ -1,0 +1,99 @@
+# VLM-ARB Configuration
+
+# Models to evaluate
+models:
+  - name: gpt4v
+    enabled: true
+    config:
+      max_tokens: 1024
+      temperature: 0.7
+  
+  - name: claude
+    enabled: true
+    config:
+      model_version: "claude-3-sonnet-20240229"
+      max_tokens: 1024
+  
+  - name: blip2
+    enabled: false
+    config:
+      precision: "fp16"
+      device: "cuda"
+  
+  - name: llava
+    enabled: false
+    config:
+      precision: "int8"
+      device: "cuda"
+
+# Attack modules to run
+attacks:
+  typographic:
+    enabled: true
+    config:
+      font_size: 40
+      opacity: 1.0
+  
+  perturbation:
+    enabled: false
+    config:
+      method: "fgsm"
+      epsilon: 0.031  # 8/255
+  
+  prompt_injection:
+    enabled: false
+    config:
+      technique: "white_on_white"
+      opacity: 0.1
+  
+  patch:
+    enabled: false
+    config:
+      patch_size: 50
+      opacity: 1.0
+  
+  crossmodal:
+    enabled: true
+    config:
+      conflict_type: "semantic"
+      conflict_strength: 1.0
+
+# Dataset configuration
+dataset:
+  name: vqav2
+  split: val
+  sample_size: 100
+  # Uncomment to use custom dataset:
+  # data_dir: "path/to/custom/dataset"
+
+# Evaluation metrics to compute
+evaluation:
+  metrics:
+    - "asr"           # Attack Success Rate
+    - "ods"           # Output Deviation Score
+    - "cmcs"          # Cross-Modal Conflict Score
+    # - "sbr"         # Safety Bypass Rate (API models only)
+  
+  # Weights for composite robustness score
+  weights:
+    asr: 0.25
+    ods: 0.25
+    cmcs: 0.25
+    sbr: 0.25
+
+# Output configuration
+output:
+  save_results: true
+  results_dir: "results/raw"
+  generate_report: true
+  report_format: "html"  # "pdf", "html", or "both"
+  report_dir: "results/reports"
+
+# Logging
+logging:
+  level: "INFO"  # "DEBUG", "INFO", "WARNING", "ERROR"
+  save_logs: true
+  log_file: "results/benchmark.log"
+
+# Random seed for reproducibility
+seed: 42

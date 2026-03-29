@@ -1,0 +1,16 @@
+"""Test notes: TBD
+
+Tests will be added as implementation progresses.
+Key areas to test:
+- Attack implementations (does apply() return modified image?)
+- Model wrappers (can they query with image + prompt?)
+- Metrics calculation (do they return 0-1 scores?)
+- Config loading (YAML parsing)
+- End-to-end benchmark flow
+
+To add tests:
+1. Create test_*.py files in tests/
+2. Use pytest framework
+3. Mock API calls if needed
+4. Test on sample images
+"""
