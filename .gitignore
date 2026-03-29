@@ -6,6 +6,16 @@ datasets/**/images/
 datasets/**/pertubation_pertubated/
 datasets/**/perturbation_pertubated/
 
+# Generated benchmark outputs
+results/*.json
+results/**/*.json
+results/*.csv
+results/**/*.csv
+results/*.html
+results/**/*.html
+results/*.pdf
+results/**/*.pdf
+
 # Common image formats
 *.jpg
 *.jpeg
