@@ -1,0 +1,17 @@
+# Large/raw image assets
+Images/
+
+# Dataset image directories
+datasets/**/images/
+datasets/**/pertubation_pertubated/
+datasets/**/perturbation_pertubated/
+
+# Common image formats
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.bmp
+*.gif
+*.tif
+*.tiff
