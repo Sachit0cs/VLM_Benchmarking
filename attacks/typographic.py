@@ -5,11 +5,10 @@ This attack overlays text on images to confuse Vision-Language Models about the
 actual content. For example, placing "BANANA" text over an apple image may cause
 the model to output "banana" instead of "apple".
 
-Implementation Status: TODO
-Assigned To: [Team Member Name]
+Implementation Status: COMPLETE
 """
 
-from PIL.Image import Image
+from PIL import Image, ImageDraw, ImageFont
 from .base import BaseAttack
 
 
@@ -52,13 +51,73 @@ class TypographicAttack(BaseAttack):
         
         Returns:
             Modified image with overlaid text
-        
-        TODO:
-        -----
-        1. Load or create a font (use PIL ImageFont)
-        2. Determine text position (if not specified, place at center)
-        3. Create a text layer with specified color and opacity
-        4. Composite the text onto the original image
-        5. Return the modified image
         """
-        raise NotImplementedError("TypographicAttack.apply() not yet implemented")
+        # Convert image to RGB if needed
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Load font
+        font = self._load_font()
+        
+        # Convert to RGBA for opacity handling
+        result = image.convert('RGBA')
+        
+        # Create transparent text layer
+        txt_layer = Image.new('RGBA', result.size, (0, 0, 0, 0))
+        
+        # Calculate text position
+        draw_temp = ImageDraw.Draw(txt_layer)
+        bbox = draw_temp.textbbox((0, 0), self.text_label, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        if self.position is None:
+            # Center the text
+            x = (result.width - text_width) // 2
+            y = (result.height - text_height) // 2
+        else:
+            x, y = self.position
+        
+        # Handle opacity - convert font_color to RGBA with alpha
+        alpha = int(255 * self.opacity)
+        if len(self.font_color) == 3:
+            font_color_with_alpha = self.font_color + (alpha,)
+        else:
+            font_color_with_alpha = self.font_color
+        
+        # Draw text on transparent layer
+        draw_temp.text((x, y), self.text_label, fill=font_color_with_alpha, font=font)
+        
+        # Composite the text layer onto the original image
+        result = Image.alpha_composite(result, txt_layer)
+        
+        # Convert back to RGB
+        return result.convert('RGB')
+    
+    def _load_font(self) -> ImageFont.FreeTypeFont:
+        """
+        Load a font for text rendering.
+        
+        Attempts to load a system font; falls back to default if unavailable.
+        
+        Returns:
+            PIL ImageFont object
+        """
+        # Try to load system fonts in order of preference
+        font_paths = [
+            "/System/Library/Fonts/Helvetica.ttc",  # macOS
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux
+            "C:\\Windows\\Fonts\\arial.ttf",  # Windows
+        ]
+        
+        for font_path in font_paths:
+            try:
+                return ImageFont.truetype(font_path, self.font_size)
+            except (FileNotFoundError, OSError):
+                continue
+        
+        # Fallback to default font if no system fonts found
+        try:
+            return ImageFont.load_default()
+        except Exception:
+            raise RuntimeError("Could not load any font. Please ensure PIL/Pillow is properly installed.")
