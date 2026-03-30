@@ -1,6 +1,8 @@
 # Large/raw image assets
 Images/
 
+venv/
+
 # Dataset image directories
 datasets/**/images/
 datasets/**/pertubation_pertubated/
