@@ -25,3 +25,6 @@ results/**/*.pdf
 *.gif
 *.tif
 *.tiff
+
+# Benchmark outputs
+results/

@@ -60,11 +60,11 @@ attacks:
 
 # Dataset configuration
 dataset:
-  name: vqav2
+  name: typographic
   split: val
-  sample_size: 100
-  # Uncomment to use custom dataset:
-  # data_dir: "path/to/custom/dataset"
+  sample_size: 20
+  data_dir: "datasets"
+  mapping_file: "typographic_mapping.csv"
 
 # Evaluation metrics to compute
 evaluation:
