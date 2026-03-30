@@ -70,7 +70,20 @@ vlm-arb/
 ├── results/
 │   ├── raw/                      # JSON results (raw output)
 │   └── reports/                  # Generated reports
-├── tests/                        # Test suite (TBD)
+├── tests/
+│   ├── image_injection/          # Image injection attack tests
+│   │   ├── test_attack_basic.py  # ✅ Unit tests (no models)
+│   │   ├── test_attack_generation.py  # ✅ Test data generation (local)
+│   │   ├── test_lightweight_models.py  # ⚠️ Local CLIP/MobileViT tests
+│   │   ├── test_blip2_injection.py     # ⚠️ Local BLIP-2 tests
+│   │   ├── conftest.py           # Pytest fixtures
+│   │   └── README.md             # Test documentation
+│   └── __init__.py
+├── cloud/
+│   ├── notebooks/                # Cloud-based Jupyter notebooks
+│   │   ├── ImageInjection_MultiModel_Cloud.ipynb  # Colab: CLIP, MobileViT, BLIP-2, LLaVA
+│   │   └── README.md             # Cloud testing guide
+│   └── __init__.py
 ├── notebooks/                    # Jupyter notebooks for analysis
 ├── docs/                         # Documentation
 ├── benchmark.py                  # Main entry point
@@ -81,7 +94,91 @@ vlm-arb/
 └── README.md                     # This file
 ```
 
-## Quick Start
+## Testing Strategy: Local Code + Cloud Benchmarking
+
+We separate **test data generation** (local) from **heavy model testing** (cloud) to optimize cost and reproducibility.
+
+### 📱 Local Testing (Your Machine)
+
+✅ **Lightweight, no GPU needed**
+
+**Test suite location:** `tests/image_injection/`
+
+| Test | Purpose | Size | Time | GPU |
+|------|---------|------|------|-----|
+| `test_attack_basic.py` | Unit tests | 10KB | <1s | ❌ |
+| `test_attack_generation.py` | Generate test data + variants | 20KB | 2-5s | ❌ |
+| `test_lightweight_models.py` | Test CLIP (350MB), MobileViT (20MB) | 30KB | 1-2m | ⚠️ |
+| `test_blip2_injection.py` | Local BLIP-2 testing | 20KB | 3-5m | ⚠️ |
+
+**Quick start local tests:**
+```bash
+# Run unit tests (no dependencies)
+pytest tests/image_injection/test_attack_basic.py -v
+
+# Generate test data (create test images + attacked variants)
+python tests/image_injection/test_attack_generation.py
+
+# Test on lightweight models
+python tests/image_injection/test_lightweight_models.py
+```
+
+### ☁️ Cloud Testing (Google Colab)
+
+✅ **Heavy models, free GPU, downloadable results**
+
+**Notebook location:** `cloud/notebooks/ImageInjection_MultiModel_Cloud.ipynb`
+
+**Tests 4 vulnerable models** with metrics:
+- CLIP (350MB) — Ultra-lightweight vision-language
+- MobileViT (20MB) — Mobile device optimization
+- BLIP-2 (2.7B) — Lightweight VLM
+- LLaVA (7B+) — Open-source VLM
+
+**Workflow:**
+1. Go to [Google Colab](https://colab.research.google.com/)
+2. Upload `cloud/notebooks/ImageInjection_MultiModel_Cloud.ipynb`
+3. Run cells sequentially (auto-installs dependencies)
+4. Download results: JSON metrics + comparison visualizations
+
+**What you get:**
+- Vulnerability rankings (which models are most vulnerable)
+- Attack transferability analysis (attack works on which models)
+- Metrics comparison (ASR, ODS, SBR across all models)
+- PNG visualizations for your report
+
+### 🔄 Data Flow
+
+```
+LOCAL (Your Machine)                    CLOUD (Colab)
+│
+├─ test_attack_generation.py ────────→ Imports functions
+│  ├─ create test images               Clone repo in Colab
+│  ├─ generate variants                Run functions: create_test_images(),
+│  └─ (reusable utilities)             generate_attacked_images()
+│
+└─ test_lightweight_models.py          Load heavy models
+   (optional local testing)             CLIP, MobileViT, BLIP-2, LLaVA
+                                        Compute metrics, download results
+```
+
+### 📊 Why This Structure?
+
+| Aspect | Local | Cloud |
+|--------|-------|-------|
+| Test Data | ✅ Generated locally | Imports from local |
+| Heavy Models | ❌ Optional | ✅ Full suite |
+| GPU | ⚠️ Optional | ✅ Free (Colab) |
+| Storage | 🔋 ~200MB | 🌐 Google Drive |
+| Cost | 🆓 Free | 🆓 Free (Colab) |
+| Reproducibility | Codified | Downloadable |
+| Scalability | Limited | Unlimited |
+
+**Key principle:** Code lives locally, heavy workloads run on cloud. You have all implementation locally, results are downloadable for your report.
+
+---
+
+
 
 ### 1. Install Dependencies
 
