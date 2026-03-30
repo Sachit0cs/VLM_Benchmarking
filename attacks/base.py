@@ -22,7 +22,7 @@ class BaseAttack(ABC):
         Initialize the attack.
         
         Args:
-            name: Human-readable name of the attack (e.g., "Typographic", "FGSM")
+            name: Human-readable name of the attack (e.g., "Typographic", "PGD")
             **kwargs: Attack-specific hyperparameters
         """
         self.name = name

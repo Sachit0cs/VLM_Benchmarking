@@ -37,7 +37,7 @@ attacks:
   perturbation:
     enabled: false
     config:
-      method: "fgsm"
+      method: "pgd"
       epsilon: 0.031  # 8/255
   
   prompt_injection:

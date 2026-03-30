@@ -12,7 +12,7 @@ This is simultaneously:
 
 ### 5 Attack Types
 1. **Typographic Attack** — Overlay misleading text labels on images
-2. **Adversarial Perturbation** — Pixel-level noise (FGSM/PGD)
+2. **Adversarial Perturbation** — Pixel-level noise (PGD)
 3. **Prompt Injection** — Hidden text instructions in images (white-on-white, steganography)
 4. **Adversarial Patch** — Universal stickers that fool models
 5. **Cross-Modal Conflict** ⭐ — Novel: measure vision vs language dominance
@@ -293,7 +293,7 @@ See `config.yaml` for complete options.
 - **HuggingFace Transformers** (BLIP-2, LLaVA)
 - **OpenAI API** (GPT-4o)
 - **Anthropic API** (Claude)
-- **torchattacks** (FGSM/PGD perturbations)
+- **torchattacks** (PGD perturbations)
 - **Pillow** (image manipulation)
 - **sentence-transformers** (semantic similarity)
 - **matplotlib, seaborn** (visualization)

@@ -1,8 +1,8 @@
 """
-Adversarial Perturbation Attack: Add pixel-level noise using FGSM/PGD.
+Adversarial Perturbation Attack: Add pixel-level noise using PGD.
 
-This attack adds imperceptible noise to images using gradient-based methods
-(FGSM or PGD) to fool Vision-Language Models while remaining visually similar.
+This attack adds imperceptible noise to images using Projected Gradient Descent
+(PGD) to fool Vision-Language Models while remaining visually similar.
 
 Implementation Status: TODO
 Assigned To: [Team Member Name]
@@ -13,6 +13,7 @@ import csv
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image as PILImage
@@ -25,12 +26,12 @@ from .base import BaseAttack
 
 class PerturbationAttack(BaseAttack):
     """
-    Adversarial perturbation attack using FGSM or PGD methods.
+    Adversarial perturbation attack using PGD.
     
     Parameters:
     -----------
     method : str
-        Either "fgsm" (fast, one-step) or "pgd" (iterative, stronger)
+        Must be "pgd"
     epsilon : float
         Maximum perturbation magnitude (typically 8/255 ≈ 0.031)
     alpha : float, optional
@@ -41,7 +42,7 @@ class PerturbationAttack(BaseAttack):
     
     def __init__(
         self,
-        method: str = "fgsm",
+        method: str = "pgd",
         epsilon: float = 8 / 255,
         alpha: float = 2 / 255,
         iterations: int = 7,
@@ -50,8 +51,8 @@ class PerturbationAttack(BaseAttack):
     ):
         """Initialize the perturbation attack."""
         super().__init__(name="Perturbation", **kwargs)
-        if method not in ["fgsm", "pgd"]:
-            raise ValueError(f"method must be 'fgsm' or 'pgd', got {method}")
+        if method != "pgd":
+            raise ValueError(f"method must be 'pgd', got {method}")
         self.method = method
         self.epsilon = epsilon
         self.alpha = alpha
@@ -66,7 +67,7 @@ class PerturbationAttack(BaseAttack):
         self.model = self._load_surrogate_model()
 
     def _load_surrogate_model(self) -> torch.nn.Module:
-        """Load a fixed surrogate classifier used to compute FGSM/PGD gradients."""
+        """Load a fixed surrogate classifier used to compute PGD gradients."""
         try:
             weights = models.ResNet18_Weights.IMAGENET1K_V1
             model = models.resnet18(weights=weights)
@@ -82,8 +83,8 @@ class PerturbationAttack(BaseAttack):
     def _to_tensor(self, image: Image) -> torch.Tensor:
         """Convert PIL Image to BCHW float tensor in [0, 1]."""
         image = image.convert("RGB")
-        x = torch.from_numpy(torch.ByteTensor(torch.ByteStorage.from_buffer(image.tobytes())).numpy())
-        x = x.view(image.height, image.width, 3).permute(2, 0, 1).float() / 255.0
+        x_np = np.asarray(image, dtype=np.float32) / 255.0
+        x = torch.from_numpy(x_np).permute(2, 0, 1).contiguous()
         return x.unsqueeze(0).to(self.device)
 
     def _to_pil(self, x: torch.Tensor) -> Image:
@@ -101,14 +102,6 @@ class PerturbationAttack(BaseAttack):
             y_pred = self.model(self._normalize(x)).argmax(dim=1)
         logits = self.model(self._normalize(x))
         return F.cross_entropy(logits, y_pred)
-
-    def _fgsm(self, x: torch.Tensor) -> torch.Tensor:
-        x_adv = x.clone().detach().requires_grad_(True)
-        loss = self._untargeted_loss(x_adv)
-        loss.backward()
-        grad_sign = x_adv.grad.sign()
-        x_adv = x_adv + self.epsilon * grad_sign
-        return x_adv.detach().clamp(0, 1)
 
     def _pgd(self, x: torch.Tensor) -> torch.Tensor:
         x_orig = x.clone().detach()
@@ -138,10 +131,7 @@ class PerturbationAttack(BaseAttack):
         transferable perturbations for VLM benchmarking.
         """
         x = self._to_tensor(image)
-        if self.method == "fgsm":
-            x_adv = self._fgsm(x)
-        else:
-            x_adv = self._pgd(x)
+        x_adv = self._pgd(x)
         return self._to_pil(x_adv)
 
 
@@ -189,7 +179,7 @@ def run_batch_perturbation(
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Batch FGSM/PGD perturbation generator")
+    parser = argparse.ArgumentParser(description="Batch PGD perturbation generator")
     parser.add_argument(
         "--input-dir",
         type=Path,
@@ -208,7 +198,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional labels file path; defaults to <input-dir>/labels.csv",
     )
-    parser.add_argument("--method", choices=["fgsm", "pgd"], default="fgsm")
+    parser.add_argument(
+        "--method",
+        choices=["pgd"],
+        default="pgd",
+        help="Perturbation method to use (PGD only)",
+    )
     parser.add_argument("--epsilon", type=float, default=8 / 255)
     parser.add_argument("--alpha", type=float, default=2 / 255)
     parser.add_argument("--iterations", type=int, default=7)
