@@ -22,6 +22,7 @@ from datasets.loader import DatasetLoader
 from evaluator.metrics import attack_success_rate, output_deviation_score
 from models.gpt4v import GPT4VisionModel
 from models.claude import ClaudeVisionModel
+from report.generator import ReportGenerator
 
 # Import modules (will be implemented)
 # from attacks import BaseAttack
@@ -280,15 +281,21 @@ class VLMArbBenchmark:
         Returns:
             Path to generated report
         
-        TODO:
-        -----
-        1. Aggregate results to ModelRobustnessScore objects
-        2. Create visualizations
-        3. Generate PDF/HTML report
-        4. Save to results/reports/
-        5. Return report path
         """
-        raise NotImplementedError("generate_report() not yet implemented")
+        output_cfg = self.config.get("output", {}) if self.config else {}
+        results_root = Path(self.config.get("output", {}).get("results_dir", "results")).parent if self.config else Path("results")
+        report_dir = output_cfg.get("report_dir", "results/reports")
+        report_format = str(output_cfg.get("report_format", "pdf")).lower().strip()
+
+        generator = ReportGenerator(results_dir=str(results_root), output_dir=report_dir)
+
+        if report_format == "html":
+            return generator.generate_html_report()
+        if report_format == "both":
+            pdf_path = generator.generate_pdf_report()
+            html_path = generator.generate_html_report()
+            return f"PDF: {pdf_path} | HTML: {html_path}"
+        return generator.generate_pdf_report()
 
 
 def main():
