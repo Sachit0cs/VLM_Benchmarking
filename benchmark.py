@@ -12,10 +12,16 @@ python benchmark.py --help                  # Show all options
 
 import argparse
 import logging
-from typing import List, Dict
+from typing import List, Dict, Any
 from pathlib import Path
 import json
 from datetime import datetime
+import yaml
+
+from datasets.loader import DatasetLoader
+from evaluator.metrics import attack_success_rate, output_deviation_score
+from models.gpt4v import GPT4VisionModel
+from models.claude import ClaudeVisionModel
 
 # Import modules (will be implemented)
 # from attacks import BaseAttack
@@ -82,7 +88,41 @@ class VLMArbBenchmark:
         3. Store in self.config
         4. Validate that enabled models/attacks exist
         """
-        raise NotImplementedError("load_config() not yet implemented")
+        if not self.config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {self.config_path}")
+
+        with self.config_path.open("r", encoding="utf-8") as f:
+            self.config = yaml.safe_load(f) or {}
+
+        if "models" not in self.config:
+            self.config["models"] = []
+        if "dataset" not in self.config:
+            self.config["dataset"] = {"name": "typographic", "data_dir": "datasets"}
+        if "output" not in self.config:
+            self.config["output"] = {"save_results": True, "results_dir": "results/raw"}
+
+    def _initialize_models(self) -> List[Any]:
+        """Initialize enabled model wrappers; skip unavailable models gracefully."""
+        models_cfg = self.config.get("models", [])
+        initialized = []
+
+        for model_item in models_cfg:
+            if not model_item.get("enabled", False):
+                continue
+
+            name = model_item.get("name", "").lower()
+            mcfg = model_item.get("config", {})
+            try:
+                if name == "gpt4v":
+                    initialized.append(GPT4VisionModel(**mcfg))
+                elif name == "claude":
+                    initialized.append(ClaudeVisionModel(**mcfg))
+                else:
+                    logger.warning("Model '%s' is not wired in minimal benchmark path; skipping.", name)
+            except Exception as exc:
+                logger.warning("Skipping model '%s': %s", name, exc)
+
+        return initialized
     
     def run(self) -> None:
         """
@@ -106,7 +146,105 @@ class VLMArbBenchmark:
         7. Save raw results to results/raw/{timestamp}.json
         8. Generate report
         """
-        raise NotImplementedError("run() not yet implemented")
+        self.load_config()
+
+        dataset_cfg = self.config.get("dataset", {})
+        dataset_name = dataset_cfg.get("name", "typographic")
+        data_dir = dataset_cfg.get("data_dir", "datasets")
+        split = dataset_cfg.get("split", "val")
+        sample_size = dataset_cfg.get("sample_size")
+        mapping_file = dataset_cfg.get("mapping_file")
+
+        loader = DatasetLoader(
+            dataset_name=dataset_name,
+            data_dir=data_dir,
+            mapping_file=mapping_file,
+            sample_size=sample_size,
+            default_question=dataset_cfg.get("default_question", "What is in this image?"),
+        )
+        try:
+            datapoints = loader.load(split=split)
+        except NotImplementedError:
+            logger.warning(
+                "Dataset '%s' loader is not implemented yet. Falling back to local typographic dataset.",
+                dataset_name,
+            )
+            fallback_loader = DatasetLoader(
+                dataset_name="typographic",
+                data_dir="datasets",
+                sample_size=sample_size,
+                default_question=dataset_cfg.get("default_question", "What is in this image?"),
+            )
+            datapoints = fallback_loader.load(split=split)
+        if not datapoints:
+            raise RuntimeError("No datapoints loaded. Check dataset configuration and files.")
+
+        models = self._initialize_models()
+        if not models:
+            logger.warning("No queryable models initialized. Results will not include model outputs.")
+            self.results = [
+                {
+                    "timestamp": self.timestamp,
+                    "image_id": dp.image_id,
+                    "question": dp.question,
+                    "poison_text": dp.metadata.get("poison_text"),
+                    "original_path": dp.metadata.get("original_path"),
+                    "poison_path": dp.metadata.get("poison_path"),
+                    "error": "No enabled/available model wrappers",
+                }
+                for dp in datapoints
+            ]
+            if self.config.get("output", {}).get("save_results", True):
+                self.save_results()
+            return
+
+        run_results: List[Dict[str, Any]] = []
+        for model in models:
+            for dp in datapoints:
+                poison_path = Path(dp.metadata.get("poison_path", ""))
+                clean_output = ""
+                attacked_output = ""
+                error = None
+
+                try:
+                    clean_output = model.query(dp.image, dp.question)
+                    if poison_path.exists():
+                        from PIL import Image as PILImage
+
+                        with PILImage.open(poison_path) as poison_img_obj:
+                            poison_img = poison_img_obj.convert("RGB")
+                        attacked_output = model.query(poison_img, dp.question)
+                    else:
+                        attacked_output = ""
+                        error = f"Poison image missing: {poison_path}"
+                except Exception as exc:
+                    error = str(exc)
+
+                asr = attack_success_rate(clean_output, attacked_output)
+                ods = output_deviation_score(clean_output, attacked_output)
+
+                run_results.append(
+                    {
+                        "timestamp": self.timestamp,
+                        "model_id": getattr(model, "model_id", "unknown"),
+                        "model_name": getattr(model, "model_name", model.__class__.__name__),
+                        "image_id": dp.image_id,
+                        "question": dp.question,
+                        "poison_text": dp.metadata.get("poison_text"),
+                        "original_path": dp.metadata.get("original_path"),
+                        "poison_path": dp.metadata.get("poison_path"),
+                        "clean_output": clean_output,
+                        "attacked_output": attacked_output,
+                        "asr": asr,
+                        "ods": ods,
+                        "error": error,
+                    }
+                )
+
+        self.results = run_results
+
+        if self.config.get("output", {}).get("save_results", True):
+            self.save_results()
     
     def save_results(self, filepath: str = None) -> str:
         """
@@ -124,7 +262,16 @@ class VLMArbBenchmark:
         2. Save to JSON file
         3. Return filepath
         """
-        raise NotImplementedError("save_results() not yet implemented")
+        if filepath is None:
+            results_dir = Path(self.config.get("output", {}).get("results_dir", "results/raw"))
+            results_dir.mkdir(parents=True, exist_ok=True)
+            filepath = str(results_dir / f"{self.timestamp}.json")
+
+        output_path = Path(filepath)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("w", encoding="utf-8") as f:
+            json.dump(self.results, f, indent=2)
+        return str(output_path)
     
     def generate_report(self) -> str:
         """

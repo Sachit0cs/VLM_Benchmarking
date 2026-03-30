@@ -6,5 +6,6 @@ Each attack inherits from BaseAttack and implements the apply() method.
 """
 
 from .base import BaseAttack
+from .typographic import TypographicAttack
 
-__all__ = ["BaseAttack"]
+__all__ = ["BaseAttack", "TypographicAttack"]

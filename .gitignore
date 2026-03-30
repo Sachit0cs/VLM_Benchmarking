@@ -15,3 +15,6 @@ datasets/**/perturbation_pertubated/
 *.gif
 *.tif
 *.tiff
+
+# Benchmark outputs
+results/
