@@ -11,7 +11,7 @@ Paper reference: Liu et al., "Prompt Injection Attack Against LLM-integrated App
 """
 
 import os
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union
 from PIL import Image, ImageDraw, ImageFont
 import io
 import random
@@ -111,7 +111,7 @@ class PromptInjectionAttack(BaseAttack):
         
         return f"{self.framework_text}\n{injection_text}"
     
-    def apply(self, image: Image.Image, prompt: str = None) -> Image.Image:
+    def apply(self, image: Image.Image, prompt: Optional[str] = None) -> Image.Image:
         """
         Apply visual prompt injection by embedding hidden text in the image.
         
@@ -164,16 +164,11 @@ class PromptInjectionAttack(BaseAttack):
         img_copy = image.copy()
         draw = ImageDraw.Draw(img_copy)
         
-        # Try to load a default font, fallback to default if not available
-        try:
-            font_size = 8
-            font = ImageFont.truetype("/Library/Fonts/Arial.ttf", font_size)
-        except (IOError, OSError):
-            # Fallback to default font
-            font = ImageFont.load_default()
+        # Load font using robust method
+        font = self._load_font(font_size=8)
         
-        # Calculate text position
-        position = self._get_text_position(image.size, text)
+        # Calculate text position using textbbox (Pillow 10+ compatible)
+        position = self._get_text_position(image.size, text, font, draw)
         
         # Draw white text on white background (visible only to VLM due to compression artifacts)
         draw.text(position, text, fill=(255, 255, 255), font=font)
@@ -201,15 +196,11 @@ class PromptInjectionAttack(BaseAttack):
         txt_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(txt_layer)
         
-        # Load font
-        try:
-            font_size = 8
-            font = ImageFont.truetype("/Library/Fonts/Arial.ttf", font_size)
-        except (IOError, OSError):
-            font = ImageFont.load_default()
+        # Load font using robust method
+        font = self._load_font(font_size=8)
         
-        # Calculate position
-        position = self._get_text_position(image.size, text)
+        # Calculate position using textbbox (Pillow 10+ compatible)
+        position = self._get_text_position(image.size, text, font, draw)
         
         # Draw text with specified opacity
         alpha = int(255 * self.opacity)
@@ -251,13 +242,53 @@ class PromptInjectionAttack(BaseAttack):
             print(f"Steganography encoding failed: {e}. Falling back to white-on-white.")
             return self._embed_white_on_white(image, text)
     
-    def _get_text_position(self, image_size: Tuple[int, int], text: str) -> Tuple[int, int]:
+    def _load_font(self, font_size: int = 8) -> Union[ImageFont.FreeTypeFont, ImageFont.ImageFont]:
+        """
+        Load a font for text rendering. Compatible with Pillow 10+.
+        
+        Args:
+            font_size: Size of the font in pixels
+        
+        Returns:
+            PIL ImageFont object
+        """
+        # Try to load system fonts in order of preference
+        font_paths = [
+            "/Library/Fonts/Arial.ttf",      # macOS
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux
+            "C:\\Windows\\Fonts\\arial.ttf",  # Windows
+        ]
+        
+        for font_path in font_paths:
+            try:
+                return ImageFont.truetype(font_path, font_size)
+            except (FileNotFoundError, OSError):
+                continue
+        
+        # Fallback to default font if no system fonts found
+        try:
+            # In Pillow 10+, load_default() can be called without arguments
+            # but we avoid using it if possible to prevent deprecation issues
+            return ImageFont.load_default()
+        except TypeError:
+            # Fallback for older Pillow versions that require size argument
+            return ImageFont.load_default(size=font_size)
+        except Exception:
+            raise RuntimeError("Could not load any font. Please ensure PIL/Pillow is properly installed.")
+    
+    def _get_text_position(self, image_size: Tuple[int, int], text: str, 
+                          font: Optional[Union[ImageFont.FreeTypeFont, ImageFont.ImageFont]] = None, 
+                          draw: Optional[ImageDraw.ImageDraw] = None) -> Tuple[int, int]:
         """
         Calculate text position in image.
+        
+        Uses textbbox for Pillow 10+ compatibility.
         
         Args:
             image_size: (width, height) of image
             text: Text to position
+            font: PIL ImageFont object for text measurement
+            draw: PIL ImageDraw object for textbbox calculation
         
         Returns:
             (x, y) coordinates for text placement
@@ -265,8 +296,10 @@ class PromptInjectionAttack(BaseAttack):
         if self.position == "top_left":
             return (5, 5)
         elif self.position == "bottom_right":
+            # For bottom-right, estimate position without relying on deprecated textsize
             return (image_size[0] - 100, image_size[1] - 20)
         elif self.position == "center":
+            # For center, estimate position
             return (image_size[0] // 2 - 50, image_size[1] // 2)
         else:  # "random"
             x = random.randint(5, max(5, image_size[0] - 100))
