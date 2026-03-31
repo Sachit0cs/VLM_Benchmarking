@@ -105,7 +105,8 @@ class ReportGenerator:
         if not isinstance(results, dict) or not results:
             return None
 
-        summary = AttackSummary(attack_name="perturbation", source_files=[source])
+        attack_name = str(payload.get("attack_type") or self._infer_attack_from_name(source))
+        summary = AttackSummary(attack_name=attack_name, source_files=[source])
         summary.metadata = {
             "num_images": payload.get("num_images"),
             "clean_dir": payload.get("clean_dir"),
@@ -115,6 +116,40 @@ class ReportGenerator:
 
         for model_name, model_metrics in results.items():
             if not isinstance(model_metrics, dict):
+                continue
+
+            prediction_change_rate = model_metrics.get("prediction_change_rate")
+            target_hit_rate = model_metrics.get("target_hit_rate")
+
+            # Typographic/other local runs can be change-rate based and may not have accuracy fields.
+            if prediction_change_rate is not None:
+                change_rate = self._safe_float(prediction_change_rate)
+                clean_acc_raw = model_metrics.get("clean_accuracy")
+                pert_acc_raw = model_metrics.get("perturbed_accuracy")
+                clean_acc = None if clean_acc_raw is None else self._safe_float(clean_acc_raw)
+                pert_acc = None if pert_acc_raw is None else self._safe_float(pert_acc_raw)
+
+                model_payload: Dict[str, float] = {
+                    "num_pairs": self._safe_float(model_metrics.get("num_pairs")),
+                    "prediction_change_rate": change_rate,
+                    "attack_effectiveness": change_rate,
+                    "robustness_score": max(0.0, min(1.0, 1.0 - change_rate)),
+                }
+
+                if target_hit_rate is not None:
+                    model_payload["target_hit_rate"] = self._safe_float(target_hit_rate)
+                if clean_acc is not None:
+                    model_payload["clean_accuracy"] = clean_acc
+                if pert_acc is not None:
+                    model_payload["perturbed_accuracy"] = pert_acc
+
+                if clean_acc is not None and pert_acc is not None:
+                    drop_abs = self._safe_float(model_metrics.get("accuracy_drop_abs"), clean_acc - pert_acc)
+                    drop_pp = self._safe_float(model_metrics.get("accuracy_drop_pct_points"), drop_abs * 100.0)
+                    model_payload["accuracy_drop_abs"] = drop_abs
+                    model_payload["accuracy_drop_pct_points"] = drop_pp
+
+                summary.models[model_name] = model_payload
                 continue
 
             clean_acc = self._safe_float(model_metrics.get("clean_accuracy"))
