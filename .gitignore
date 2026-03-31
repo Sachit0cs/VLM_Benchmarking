@@ -1,20 +1,32 @@
-# Python environments and cache
+# Large/raw image assets
+Images/
+
 venv/
-.venv/
-__pycache__/
-*.py[cod]
 
-# Dataset artifacts (keep folder structure via .gitkeep)
-datasets/**/*.csv
-datasets/**/images/**
-!datasets/**/images/
-!datasets/**/images/.gitkeep
+# Dataset image directories
+datasets/**/images/
+datasets/**/pertubation_pertubated/
+datasets/**/perturbation_pertubated/
 
-# Report and benchmark outputs (keep folder structure via .gitkeep)
-results/**
-!results/.gitkeep
-!results/reports/
-!results/reports/.gitkeep
+# Generated benchmark outputs
+results/*.json
+results/**/*.json
+results/*.csv
+results/**/*.csv
+results/*.html
+results/**/*.html
+results/*.pdf
+results/**/*.pdf
 
-# Optional top-level image dump folder
-/Images/
+# Common image formats
+*.jpg
+*.jpeg
+*.png
+*.webpa
+*.bmp
+*.gif
+*.tif
+*.tiff
+
+# Benchmark outputs
+results/
