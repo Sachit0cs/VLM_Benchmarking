@@ -1,20 +1,40 @@
-# Python environments and cache
+# Large/raw image assets
+Images/
+
 venv/
-.venv/
+
+# Dataset image directories
+datasets/**/images/
+datasets/**/pertubation_pertubated/
+datasets/**/perturbation_pertubated/
+
+# Generated benchmark outputs
+results/*.json
+results/**/*.json
+results/*.csv
+results/**/*.csv
+results/*.html
+results/**/*.html
+results/*.pdf
+results/**/*.pdf
+
+# Common image formats
+*.jpg
+*.jpeg
+*.png
+*.webpa
+*.bmp
+*.gif
+*.tif
+*.tiff
+
+# Benchmark outputs
+results/
+
+# Python bytecode caches
 __pycache__/
-*.py[cod]
+**/__pycache__/
+*.pyc
 
-# Dataset artifacts (keep folder structure via .gitkeep)
-datasets/**/*.csv
-datasets/**/images/**
-!datasets/**/images/
-!datasets/**/images/.gitkeep
-
-# Report and benchmark outputs (keep folder structure via .gitkeep)
-results/**
-!results/.gitkeep
-!results/reports/
-!results/reports/.gitkeep
-
-# Optional top-level image dump folder
-/Images/
+# Local model cache (created by scripts/warm_model_cache.py)
+.model_cache/

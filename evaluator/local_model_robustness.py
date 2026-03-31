@@ -11,13 +11,15 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import torch
 from PIL import Image
+from tqdm.auto import tqdm
 
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
@@ -95,13 +97,14 @@ class TorchVisionClassifier(VisionClassifier):
 
 
 class DinoV2Classifier(VisionClassifier):
-    def __init__(self, device: str = "cpu"):
+    def __init__(self, device: str = "cpu", cache_dir: Optional[Path] = None):
         from transformers import AutoImageProcessor, AutoModelForImageClassification
 
         self.device = device
         model_id = "facebook/dinov2-base-imagenet1k-1-layer"
-        self.processor = AutoImageProcessor.from_pretrained(model_id)
-        self.model = AutoModelForImageClassification.from_pretrained(model_id).to(self.device).eval()
+        hf_kwargs = {"cache_dir": str(cache_dir)} if cache_dir else {}
+        self.processor = AutoImageProcessor.from_pretrained(model_id, **hf_kwargs)
+        self.model = AutoModelForImageClassification.from_pretrained(model_id, **hf_kwargs).to(self.device).eval()
         self.id2label = self.model.config.id2label
 
     @torch.no_grad()
@@ -116,13 +119,14 @@ class DinoV2Classifier(VisionClassifier):
 
 
 class ClipZeroShotClassifier(VisionClassifier):
-    def __init__(self, labels: Sequence[str], device: str = "cpu"):
+    def __init__(self, labels: Sequence[str], device: str = "cpu", cache_dir: Optional[Path] = None):
         from transformers import CLIPModel, CLIPProcessor
 
         self.device = device
         self.model_id = "openai/clip-vit-base-patch32"
-        self.processor = CLIPProcessor.from_pretrained(self.model_id)
-        self.model = CLIPModel.from_pretrained(self.model_id).to(self.device).eval()
+        hf_kwargs = {"cache_dir": str(cache_dir)} if cache_dir else {}
+        self.processor = CLIPProcessor.from_pretrained(self.model_id, **hf_kwargs)
+        self.model = CLIPModel.from_pretrained(self.model_id, **hf_kwargs).to(self.device).eval()
         self.labels = list(dict.fromkeys([l for l in labels if l]))
         if not self.labels:
             self.labels = [
@@ -235,7 +239,12 @@ def _accuracy(preds: List[str], labels: List[str]) -> Optional[float]:
     return correct / len(labels)
 
 
-def _evaluate_model(model_name: str, model: VisionClassifier, pairs: List[PairRecord]) -> Dict:
+def _evaluate_model(
+    model_name: str,
+    model: VisionClassifier,
+    pairs: List[PairRecord],
+    show_progress: bool = True,
+) -> Dict:
     details: List[Dict] = []
     changed = 0
     target_hits = 0
@@ -246,7 +255,11 @@ def _evaluate_model(model_name: str, model: VisionClassifier, pairs: List[PairRe
     pert_preds: List[str] = []
     labels: List[str] = []
 
-    for pair in pairs:
+    pair_iter = pairs
+    if show_progress:
+        pair_iter = tqdm(pairs, desc=f"{model_name}: pairs", unit="pair", leave=False)
+
+    for pair in pair_iter:
         try:
             with Image.open(pair.clean_path) as img_c:
                 clean_img = img_c.convert("RGB")
@@ -328,6 +341,24 @@ def _resolve_existing_dir(candidates: Sequence[Path]) -> Path:
     return candidates[0]
 
 
+def _configure_local_model_cache(cache_dir: Optional[Path]) -> Optional[Path]:
+    if not cache_dir:
+        return None
+
+    cache_root = cache_dir.resolve()
+    hf_home = cache_root / "huggingface"
+    torch_home = cache_root / "torch"
+
+    hf_home.mkdir(parents=True, exist_ok=True)
+    torch_home.mkdir(parents=True, exist_ok=True)
+
+    os.environ["HF_HOME"] = str(hf_home)
+    os.environ.setdefault("TRANSFORMERS_CACHE", str(hf_home / "transformers"))
+    os.environ["TORCH_HOME"] = str(torch_home)
+
+    return cache_root
+
+
 def _write_markdown_report(report: Dict, output_md: Path) -> None:
     output_md.parent.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -374,7 +405,11 @@ def run_local_robustness(
     device: Optional[str],
     model_names: Optional[Sequence[str]] = None,
     max_samples: Optional[int] = None,
+    cache_dir: Optional[Path] = None,
+    show_progress: bool = True,
 ) -> Dict:
+    cache_root = _configure_local_model_cache(cache_dir)
+    hf_cache_dir = (cache_root / "huggingface") if cache_root else None
     device_name = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
     if mode == "typographic":
@@ -429,8 +464,8 @@ def run_local_robustness(
     ]
 
     model_factories = {
-        "clip_vit_b32": lambda: ClipZeroShotClassifier(labels=clip_labels, device=device_name),
-        "dinov2_base_imagenet1k": lambda: DinoV2Classifier(device=device_name),
+        "clip_vit_b32": lambda: ClipZeroShotClassifier(labels=clip_labels, device=device_name, cache_dir=hf_cache_dir),
+        "dinov2_base_imagenet1k": lambda: DinoV2Classifier(device=device_name, cache_dir=hf_cache_dir),
         "resnet50_imagenet": lambda: TorchVisionClassifier("resnet50", device=device_name),
         "vit_b_16_imagenet": lambda: TorchVisionClassifier("vit_b_16", device=device_name),
     }
@@ -448,20 +483,27 @@ def run_local_robustness(
     results: Dict[str, Dict] = {}
     skipped: Dict[str, str] = {}
 
-    for model_name in selected_models:
+    model_iter = selected_models
+    if show_progress:
+        model_iter = tqdm(selected_models, desc="Models", unit="model")
+
+    for model_name in model_iter:
         factory = model_factories[model_name]
         try:
+            if show_progress:
+                tqdm.write(f"Loading model: {model_name}")
             model = factory()
-            results[model_name] = _evaluate_model(model_name, model, pairs)
+            results[model_name] = _evaluate_model(model_name, model, pairs, show_progress=show_progress)
         except Exception as exc:
             skipped[model_name] = str(exc)
 
     payload = {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "attack_type": mode,
         "dataset": dataset_name,
         "num_samples": len(pairs),
         "device": device_name,
+        "cache_dir": str(cache_root) if cache_root else None,
         "selected_models": selected_models,
         "results": results,
         "skipped": skipped,
@@ -494,6 +536,8 @@ def main(argv: Optional[List[str]] = None) -> None:
         help="Optional model keys to run (clip_vit_b32, dinov2_base_imagenet1k, resnet50_imagenet, vit_b_16_imagenet)",
     )
     parser.add_argument("--max-samples", type=int, default=None, help="Optional cap on number of image pairs")
+    parser.add_argument("--cache-dir", type=Path, default=None, help="Optional local cache directory for model weights")
+    parser.add_argument("--no-progress", action="store_true", help="Disable progress bars")
     args = parser.parse_args(argv)
 
     payload = run_local_robustness(
@@ -507,6 +551,8 @@ def main(argv: Optional[List[str]] = None) -> None:
         device=args.device,
         model_names=args.models,
         max_samples=args.max_samples,
+        cache_dir=args.cache_dir,
+        show_progress=not args.no_progress,
     )
     print(json.dumps(payload, indent=2))
 
