@@ -97,3 +97,52 @@ logging:
 
 # Random seed for reproducibility
 seed: 42
+
+# ===== FIREBASE CLOUD CONFIGURATION =====
+# For cloud-based evaluation and team collaboration
+
+firebase:
+  # Project settings
+  project_id: "YOUR_PROJECT_ID"  # Get from Firebase Console
+  bucket_name: "YOUR_PROJECT_ID.appspot.com"
+  credentials_path: "/root/VLM-ARB-Team/secrets/serviceAccountKey.json"
+
+  # Firestore collections
+  firestore:
+    results_collection: "results"          # Evaluation results
+    configs_collection: "team_configs"     # Shared dataset info
+    reports_collection: "reports"          # Report metadata
+
+# Cloud storage settings
+cloud:
+  # Cache directory (for offline mode)
+  cache_dir: "/tmp/vlm_arb_cache"
+  offline_enabled: true
+  
+  # Storage paths
+  storage:
+    datasets_bucket: "datasets/"
+    base_images_bucket: "datasets/base_images/"
+    attacked_images_bucket: "datasets/attacked_images/"
+    reports_bucket: "reports/"
+    
+    # Public access settings
+    reports_public: true
+    images_public: false
+
+# Team collaboration
+team:
+  # Google Drive folder for shared resources
+  shared_drive_folder: "/content/drive/MyDrive/VLM-ARB-Team"
+  credentials_subfolder: "secrets"
+  
+  # Shared models and attacks across team
+  default_models: ["clip", "mobilevit", "blip2", "llava"]
+  default_attacks: ["typographic", "prompt_injection"]
+
+# Colab notebook settings
+colab:
+  auto_install_packages: true
+  log_level: "INFO"
+  batch_size: 5
+  max_workers: 4

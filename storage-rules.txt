@@ -1,0 +1,37 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ===== DATASETS =====
+    // Base images and attacked images for evaluation
+    match /datasets/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+    
+    // ===== REPORTS =====
+    // Generated PDF, HTML, JSON reports and charts
+    // PUBLIC READ - anyone with link can access
+    // AUTHENTICATED WRITE - only authenticated users can upload
+    match /reports/{allPaths=**} {
+      allow read: if true;                  // 🌐 PUBLIC - shareable links work
+      allow write: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+    
+    // ===== BACKUPS =====
+    // Firestore exports and backups
+    match /backups/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+    
+    // ===== DEFAULT =====
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -2,13 +2,23 @@
 Scoring and aggregation logic for evaluator.
 
 Combines metrics into structured result objects and model-level scores.
+Integrates with Firebase Firestore for cloud logging of evaluation results.
 
-Implementation Status: TODO
-Assigned To: [Team Member Name]
+Implementation Status: Partial (core classes + cloud logging hooks)
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Optional Firebase integration
+try:
+    from utilities.cloud_sync import FirebaseSync, FirestoreMetricsLogger
+    FIREBASE_AVAILABLE = True
+except ImportError:
+    FIREBASE_AVAILABLE = False
 
 
 @dataclass
@@ -138,3 +148,106 @@ def rank_models_by_robustness(model_scores: Dict[str, ModelRobustnessScore]) -> 
     3. Return list of (model_id, score) tuples
     """
     raise NotImplementedError("rank_models_by_robustness() not yet implemented")
+
+
+# ====== CLOUD LOGGING HOOKS ======
+
+def log_results_to_firestore(
+    firestore_sync: 'FirebaseSync',
+    run_id: str,
+    model_scores: Dict[str, ModelRobustnessScore],
+    metadata: Optional[Dict[str, Any]] = None
+) -> bool:
+    """
+    Upload evaluation results to Firestore for team access.
+    
+    Args:
+        firestore_sync: FirebaseSync instance (initialized with credentials)
+        run_id: Unique run identifier
+        model_scores: Model robustness scores from aggregate_attack_results()
+        metadata: Additional metadata (dataset version, timestamp, etc.)
+    
+    Returns:
+        True if successful, False otherwise
+    
+    Example:
+        >>> from utilities.cloud_sync import FirebaseSync
+        >>> fs = FirebaseSync("path/to/credentials.json")
+        >>> success = log_results_to_firestore(fs, "eval_run_123", model_scores)
+    """
+    if not FIREBASE_AVAILABLE:
+        logger.warning("Firebase not available - skipping cloud logging")
+        return False
+    
+    try:
+        # Convert dataclass objects to dicts
+        metrics_dict = {
+            model_id: {
+                'avg_asr': score.avg_asr,
+                'avg_ods': score.avg_ods,
+                'avg_sbr': score.avg_sbr,
+                'avg_cmcs': score.avg_cmcs,
+                'composite_robustness_score': score.composite_robustness_score,
+                'num_attacks': score.num_attacks,
+                'num_images': score.num_images,
+            }
+            for model_id, score in model_scores.items()
+        }
+        
+        # Add summary stats
+        summary = {
+            'total_models': len(model_scores),
+            'best_model': min(model_scores.items(), 
+                            key=lambda x: x[1].composite_robustness_score)[0] 
+                         if model_scores else None,
+            'worst_model': max(model_scores.items(),
+                             key=lambda x: x[1].composite_robustness_score)[0]
+                          if model_scores else None,
+        }
+        
+        # Upload to Firestore
+        firestore_sync.upload_results(
+            run_id=run_id,
+            metrics_dict=metrics_dict,
+            metadata=metadata or {},
+            collection="results"
+        )
+        
+        logger.info(f"✅ Results logged to Firestore: {run_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to log results to Firestore: {e}")
+        return False
+
+
+def create_metrics_logger(
+    firestore_sync: Optional['FirebaseSync'],
+    run_id: str
+) -> Optional['FirestoreMetricsLogger']:
+    """
+    Create a metrics logger for streaming results during evaluation.
+    
+    Useful for real-time monitoring of long-running evaluations.
+    
+    Args:
+        firestore_sync: FirebaseSync instance (or None for offline mode)
+        run_id: Unique run identifier
+    
+    Returns:
+        FirestoreMetricsLogger instance, or None if Firebase unavailable
+    
+    Example:
+        >>> logger = create_metrics_logger(fs, "eval_123")
+        >>> logger.log_model_metrics("clip", asr=0.42, ods=0.38, sbr=0.15)
+        >>> logger.flush()  # Upload all metrics
+    """
+    if not FIREBASE_AVAILABLE or not firestore_sync:
+        return None
+    
+    try:
+        return FirestoreMetricsLogger(firestore_sync, run_id)
+    except Exception as e:
+        logger.warning(f"Could not create metrics logger: {e}")
+        return None
+
