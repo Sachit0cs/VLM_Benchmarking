@@ -1,148 +1,42 @@
-# VLM-ARB Configuration
+# VLM-ARB Configuration (Cloud-first with Google Drive + Firestore)
 
-# Models to evaluate
-models:
-  - name: gpt4v
-    enabled: true
-    config:
-      max_tokens: 1024
-      temperature: 0.7
-  
-  - name: claude
-    enabled: true
-    config:
-      model_version: "claude-3-sonnet-20240229"
-      max_tokens: 1024
-  
-  - name: blip2
-    enabled: false
-    config:
-      precision: "fp16"
-      device: "cuda"
-  
-  - name: llava
-    enabled: false
-    config:
-      precision: "int8"
-      device: "cuda"
-
-# Attack modules to run
-attacks:
-  typographic:
-    enabled: true
-    config:
-      font_size: 40
-      opacity: 1.0
-  
-  perturbation:
-    enabled: false
-    config:
-      method: "pgd"
-      epsilon: 0.031  # 8/255
-  
-  prompt_injection:
-    enabled: false
-    config:
-      technique: "white_on_white"
-      opacity: 0.1
-  
-  patch:
-    enabled: false
-    config:
-      patch_size: 50
-      opacity: 1.0
-  
-  crossmodal:
-    enabled: true
-    config:
-      conflict_type: "semantic"
-      conflict_strength: 1.0
-
-# Dataset configuration
-dataset:
-  name: typographic
-  split: val
-  sample_size: 20
-  data_dir: "datasets"
-  mapping_file: "typographic_mapping.csv"
-
-# Evaluation metrics to compute
-evaluation:
-  metrics:
-    - "asr"           # Attack Success Rate
-    - "ods"           # Output Deviation Score
-    - "cmcs"          # Cross-Modal Conflict Score
-    # - "sbr"         # Safety Bypass Rate (API models only)
-  
-  # Weights for composite robustness score
-  weights:
-    asr: 0.25
-    ods: 0.25
-    cmcs: 0.25
-    sbr: 0.25
-
-# Output configuration
-output:
-  save_results: true
-  results_dir: "results/raw"
-  generate_report: true
-  report_format: "html"  # "pdf", "html", or "both"
-  report_dir: "results/reports"
-
-# Logging
-logging:
-  level: "INFO"  # "DEBUG", "INFO", "WARNING", "ERROR"
-  save_logs: true
-  log_file: "results/benchmark.log"
-
-# Random seed for reproducibility
-seed: 42
-
-# ===== FIREBASE CLOUD CONFIGURATION =====
-# For cloud-based evaluation and team collaboration
+# ===== FIREBASE FIRESTORE CONFIGURATION =====
+# For real-time team collaboration and metrics logging
 
 firebase:
   # Project settings
-  project_id: "YOUR_PROJECT_ID"  # Get from Firebase Console
-  bucket_name: "YOUR_PROJECT_ID.appspot.com"
+  project_id: "vlm-arb"  # Your Firebase project ID (from Firebase Console)
   credentials_path: "/root/VLM-ARB-Team/secrets/serviceAccountKey.json"
-
-  # Firestore collections
+  
+  # Firestore collections for results and metadata
   firestore:
-    results_collection: "results"          # Evaluation results
-    configs_collection: "team_configs"     # Shared dataset info
-    reports_collection: "reports"          # Report metadata
+    collections:
+      results: "results"              # Evaluation metrics (ASR, ODS, SBR)
+      configs: "team_configs"         # Shared dataset info
+      reports: "reports"              # Report metadata
 
-# Cloud storage settings
-cloud:
-  # Cache directory (for offline mode)
+# ===== GOOGLE DRIVE CONFIGURATION =====
+# All files (datasets, reports) stored on Google Drive for team sharing
+
+drive:
+  # Shared team folder
+  team_folder: "/content/drive/MyDrive/VLM-ARB-Team"
+  
+  # Subdirectories
+  datasets_dir: "datasets"
+  reports_dir: "reports"
+  secrets_dir: "secrets"
+
+# ===== LOCAL CACHE (Offline Mode) =====
+# When offline, results are cached locally and synced when online
+
+cache:
+  enabled: true
   cache_dir: "/tmp/vlm_arb_cache"
-  offline_enabled: true
-  
-  # Storage paths
-  storage:
-    datasets_bucket: "datasets/"
-    base_images_bucket: "datasets/base_images/"
-    attacked_images_bucket: "datasets/attacked_images/"
-    reports_bucket: "reports/"
-    
-    # Public access settings
-    reports_public: true
-    images_public: false
 
-# Team collaboration
-team:
-  # Google Drive folder for shared resources
-  shared_drive_folder: "/content/drive/MyDrive/VLM-ARB-Team"
-  credentials_subfolder: "secrets"
-  
-  # Shared models and attacks across team
-  default_models: ["clip", "mobilevit", "blip2", "llava"]
-  default_attacks: ["typographic", "prompt_injection"]
+# ===== LOGGING =====
+logging:
+  level: "INFO"  # "DEBUG", "INFO", "WARNING", "ERROR"
 
-# Colab notebook settings
-colab:
-  auto_install_packages: true
-  log_level: "INFO"
-  batch_size: 5
-  max_workers: 4
+# ===== REPRODUCIBILITY =====
+seed: 42
