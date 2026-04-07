@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-04-07T19:21:39.682973Z",
+  "attack_type": "patch",
+  "dataset": "clean=datasets\\patch_original, perturbed=datasets\\patch_poisoned",
+  "num_samples": 1,
+  "device": "cpu",
+  "cache_dir": null,
+  "selected_models": [
+    "resnet50_imagenet"
+  ],
+  "results": {
+    "resnet50_imagenet": {
+      "num_pairs": 1,
+      "failed_images": 0,
+      "prediction_change_rate": 0.0,
+      "target_hit_rate": null,
+      "avg_conf_clean": 0.45681053400039673,
+      "avg_conf_perturbed": 0.49058854579925537,
+      "clean_accuracy": null,
+      "perturbed_accuracy": null,
+      "accuracy_drop_abs": null,
+      "accuracy_drop_pct_points": null,
+      "details": [
+        {
+          "filename": "images/n02088466-bloodhound__n02088466_10083.jpg",
+          "attack_type": "patch",
+          "poison_text": null,
+          "target_label": null,
+          "label": "",
+          "clean_pred": "bloodhound",
+          "clean_conf": 0.45681053400039673,
+          "perturbed_pred": "bloodhound",
+          "perturbed_conf": 0.49058854579925537,
+          "prediction_changed": false,
+          "target_hit": null
+        }
+      ]
+    }
+  },
+  "skipped": {}
+}

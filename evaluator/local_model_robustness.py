@@ -182,7 +182,12 @@ def _load_typographic_pairs(mapping_csv: Path) -> List[PairRecord]:
     return pairs
 
 
-def _load_perturbation_pairs(clean_dir: Path, perturbed_dir: Path, labels_csv: Optional[Path]) -> List[PairRecord]:
+def _load_perturbation_pairs(
+    clean_dir: Path,
+    perturbed_dir: Path,
+    labels_csv: Optional[Path],
+    attack_type: str = "perturbation",
+) -> List[PairRecord]:
     pairs: List[PairRecord] = []
     label_map: Dict[str, str] = {}
 
@@ -204,7 +209,7 @@ def _load_perturbation_pairs(clean_dir: Path, perturbed_dir: Path, labels_csv: O
                         filename=image_file,
                         clean_path=clean_path,
                         perturbed_path=pert_path,
-                        attack_type="perturbation",
+                        attack_type=attack_type,
                         label=label,
                     )
                 )
@@ -225,7 +230,7 @@ def _load_perturbation_pairs(clean_dir: Path, perturbed_dir: Path, labels_csv: O
                     filename=name,
                     clean_path=clean_files[name],
                     perturbed_path=pert_files[name],
-                    attack_type="perturbation",
+                    attack_type=attack_type,
                 )
             )
 
@@ -416,22 +421,35 @@ def run_local_robustness(
         pairs = _load_typographic_pairs(mapping_csv)
         dataset_name = str(mapping_csv)
     else:
-        clean_dir = _resolve_existing_dir(
-            [
+        if mode == "patch":
+            clean_candidates = [
+                clean_dir,
+                Path("datasets") / "patch_original",
+            ]
+            perturbed_candidates = [
+                perturbed_dir,
+                Path("datasets") / "patch_poisoned",
+            ]
+        else:
+            clean_candidates = [
                 clean_dir,
                 Path("datasets") / "Pertubation_original",
                 Path("datasets") / "perturbation_original",
             ]
-        )
-        perturbed_dir = _resolve_existing_dir(
-            [
+            perturbed_candidates = [
                 perturbed_dir,
                 Path("datasets") / "pertubation_pertubated",
                 Path("datasets") / "perturbation_perturbed",
             ]
+
+        clean_dir = _resolve_existing_dir(
+            clean_candidates
+        )
+        perturbed_dir = _resolve_existing_dir(
+            perturbed_candidates
         )
         label_path = labels if labels else clean_dir / "labels.csv"
-        pairs = _load_perturbation_pairs(clean_dir, perturbed_dir, label_path)
+        pairs = _load_perturbation_pairs(clean_dir, perturbed_dir, label_path, attack_type=mode)
         dataset_name = f"clean={clean_dir}, perturbed={perturbed_dir}"
 
     if not pairs:
@@ -521,7 +539,7 @@ def run_local_robustness(
 
 def main(argv: Optional[List[str]] = None) -> None:
     parser = argparse.ArgumentParser(description="Unified local-model robustness evaluator")
-    parser.add_argument("--mode", choices=["typographic", "perturbation"], default="perturbation")
+    parser.add_argument("--mode", choices=["typographic", "perturbation", "patch"], default="perturbation")
     parser.add_argument("--clean-dir", type=Path, default=Path("datasets") / "Pertubation_original")
     parser.add_argument("--perturbed-dir", type=Path, default=Path("datasets") / "pertubation_pertubated")
     parser.add_argument("--labels", type=Path, default=None)
