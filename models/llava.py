@@ -50,43 +50,83 @@ class LLaVAModel(BaseModel):
         
         Args:
             image: PIL Image to analyze
-            prompt: Text prompt to send to the model
+            prompt: Text prompt/question for the model
         
         Returns:
             Text response from LLaVA
-        
-        TODO:
-        -----
-        1. Lazy-initialize model on first call:
-           - Use transformers.AutoProcessor and AutoModelForCausalLM
-           - Model ID: self.llava_model_id
-           - Load with specified precision (int8 recommended for 7B on T4)
-           - Move to specified device
-        2. Process image and prompt using processor
-        3. Generate response:
-           - Images are processed through vision encoder
-           - Prompt is tokenized and passed to LLM decoder
-           - Use generate() with max_new_tokens, temperature, etc.
-        4. Decode output tokens to text
-        5. Handle errors: OOM, model download failures, CUDA
-        
-        Dependencies:
-        - transformers >= 4.30
-        - torch with CUDA for GPU
-        - accelerate for multi-GPU or quantization
-        - bitsandbytes for int8 quantization
-        
-        Example:
-        --------
-        from transformers import AutoProcessor, AutoModelForCausalLM
-        processor = AutoProcessor.from_pretrained(self.llava_model_id)
-        model = AutoModelForCausalLM.from_pretrained(
-            self.llava_model_id,
-            torch_dtype=torch.float16,
-            low_cpu_mem_usage=True
-        )
-        inputs = processor(text=prompt, images=image, return_tensors="pt")
-        outputs = model.generate(**inputs, max_new_tokens=100)
-        return processor.batch_decode(outputs)[0]
         """
-        raise NotImplementedError("LLaVAModel.query() not yet implemented")
+        import torch
+        from transformers import AutoProcessor, LlavaForConditionalGeneration
+        
+        # Lazy-initialize model on first call
+        if self.model is None:
+            # Determine device
+            if self.device is None:
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            
+            # Load processor
+            self.processor = AutoProcessor.from_pretrained(self.llava_model_id)
+            
+            # Determine dtype
+            if self.precision == "fp16":
+                torch_dtype = torch.float16
+            elif self.precision == "int8":
+                torch_dtype = torch.float16  # int8 needs fp16 base
+            else:
+                torch_dtype = torch.float32
+            
+            # Load model with precision handling
+            try:
+                if self.precision == "int8":
+                    # Int8 quantization for memory efficiency (recommended for 7B on T4)
+                    self.model = LlavaForConditionalGeneration.from_pretrained(
+                        self.llava_model_id,
+                        torch_dtype=torch_dtype,
+                        load_in_8bit=True,
+                        device_map="auto",
+                        low_cpu_mem_usage=True
+                    )
+                else:
+                    # Standard loading with explicit device
+                    self.model = LlavaForConditionalGeneration.from_pretrained(
+                        self.llava_model_id,
+                        torch_dtype=torch_dtype,
+                        low_cpu_mem_usage=True
+                    ).to(self.device)
+            except Exception as e:
+                raise RuntimeError(f"Failed to load LLaVA model from {self.llava_model_id}: {e}")
+            
+            self.model.eval()
+        
+        # Ensure image is RGB
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        
+        # Use default prompt if none provided
+        if not prompt or not prompt.strip():
+            prompt = "Describe this image in detail."
+        
+        # Generate text
+        try:
+            with torch.no_grad():
+                # Process input (LLaVA expects specific formatting)
+                inputs = self.processor(text=prompt, images=image, return_tensors="pt").to(self.device)
+                
+                # Generate response
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=100,
+                    use_cache=True,
+                    temperature=0.7
+                )
+                
+                # Decode output
+                generated_text = self.processor.batch_decode(outputs, skip_special_tokens=True)[0]
+                
+                # Clean up the output (remove prompt if included)
+                if prompt in generated_text:
+                    generated_text = generated_text.replace(prompt, "").strip()
+                
+                return generated_text.strip()
+        except Exception as e:
+            raise RuntimeError(f"LLaVA inference failed: {e}")

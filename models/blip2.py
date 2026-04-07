@@ -47,37 +47,73 @@ class BLIP2Model(BaseModel):
         
         Args:
             image: PIL Image to analyze
-            prompt: Text prompt to send to the model
+            prompt: Text prompt to send to the model (question or empty for captioning)
         
         Returns:
             Text response from BLIP-2
-        
-        TODO:
-        -----
-        1. Lazy-initialize model on first call:
-           - Use transformers.AutoProcessor and AutoModelForVisionToSeq
-           - Model ID: "Salesforce/blip2-opt-6.7b" (or -3.5b for lighter version)
-           - Load with specified precision (fp16/fp32/int8)
-           - Move to specified device
-        2. Process image with processor
-        3. Generate caption or answer based on prompt:
-           - If prompt is a question: use generate() with max_length for answer
-           - If prompt is empty: use generate() for captioning
-        4. Decode and return the text
-        5. Handle errors: OOM, missing model weights
-        
-        Dependencies:
-        - transformers >= 4.25
-        - torch with CUDA support for GPU inference
-        - bitsandbytes for int8 quantization (optional)
-        
-        Example:
-        --------
-        from transformers import AutoProcessor, AutoModelForVisionToSeq
-        processor = AutoProcessor.from_pretrained("Salesforce/blip2-opt-6.7b")
-        model = AutoModelForVisionToSeq.from_pretrained(...)
-        inputs = processor(images=image, text=prompt, return_tensors="pt")
-        outputs = model.generate(**inputs, max_length=50)
-        return processor.batch_decode(outputs)[0]
         """
-        raise NotImplementedError("BLIP2Model.query() not yet implemented")
+        import torch
+        from transformers import AutoProcessor, Blip2ForConditionalGeneration
+        
+        # Lazy-initialize model on first call
+        if self.model is None:
+            # Determine device
+            if self.device is None:
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            
+            # Model ID
+            model_id = "Salesforce/blip2-opt-6.7b"
+            
+            # Load processor
+            self.processor = AutoProcessor.from_pretrained(model_id)
+            
+            # Determine dtype
+            if self.precision == "fp16":
+                torch_dtype = torch.float16
+            elif self.precision == "int8":
+                torch_dtype = torch.float16  # int8 needs fp16 base
+            else:
+                torch_dtype = torch.float32
+            
+            # Load model with precision handling
+            try:
+                if self.precision == "int8":
+                    # Int8 quantization for memory efficiency
+                    self.model = Blip2ForConditionalGeneration.from_pretrained(
+                        model_id,
+                        torch_dtype=torch_dtype,
+                        load_in_8bit=True,
+                        device_map="auto"
+                    )
+                else:
+                    # Standard loading with explicit device
+                    self.model = Blip2ForConditionalGeneration.from_pretrained(
+                        model_id,
+                        torch_dtype=torch_dtype
+                    ).to(self.device)
+            except Exception as e:
+                raise RuntimeError(f"Failed to load BLIP-2 model: {e}")
+            
+            self.model.eval()
+        
+        # Ensure image is RGB
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        
+        # Generate text
+        try:
+            with torch.no_grad():
+                if prompt and prompt.strip():
+                    # Answer mode: use prompt as question
+                    inputs = self.processor(images=image, text=prompt, return_tensors="pt").to(self.device)
+                    outputs = self.model.generate(**inputs, max_length=50, use_cache=True)
+                else:
+                    # Caption mode: generate description without prompt
+                    inputs = self.processor(images=image, return_tensors="pt").to(self.device)
+                    outputs = self.model.generate(**inputs, max_length=50, use_cache=True)
+                
+                # Decode output
+                generated_text = self.processor.batch_decode(outputs, skip_special_tokens=True)[0]
+                return generated_text.strip()
+        except Exception as e:
+            raise RuntimeError(f"BLIP-2 inference failed: {e}")
