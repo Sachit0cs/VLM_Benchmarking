@@ -1,0 +1,166 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{caption}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5\baselineskip}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\title{VLM-ARB: Adversarial Robustness Benchmarking\\for Vision-Language Models}
+\author{Rudransh Pratap Singh}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent This report evaluates four vision-language models (CLIP, MobileViT, BLIP-2, LLaVA) against adversarial attacks using four metrics: Attack Success Rate (ASR), Output Deviation Score (ODS), Safety Bypass Rate (SBR), and Critical Information Misrepresentation Rate (CIMR). Results show LLaVA is most vulnerable (ASR: 0.78), followed by BLIP-2 (0.68), MobileViT (0.45), and CLIP (0.35). Critically, LLaVA achieves CIMR of 0.48, meaning nearly half of attacked images induce hallucinated responses. Synthetic vs. real-world (COCO) analysis shows a 0.10 ASR gap, indicating synthetic evaluations overestimate vulnerability by ~22\%.
+\end{abstract}
+
+\section{Introduction}
+
+Vision-language models (VLMs) combine visual understanding with language reasoning, enabling applications in image captioning, visual QA, document analysis, and accessibility. However, their multimodal nature introduces a vulnerability: adversarial text embedded within images can manipulate model outputs.
+
+\subsection{Key Contributions}
+
+\begin{itemize}[leftmargin=1.5em, topsep=0pt]
+    \item Benchmark framework (VLM-ARB) for evaluating VLM adversarial robustness
+    \item Implementation of prompt injection and typographic overlay attacks
+    \item Four complementary evaluation metrics: ASR, ODS, SBR, CIMR
+    \item Comparative evaluation across classifier and generative model families
+    \item Synthetic vs. real-world (COCO) robustness gap analysis
+\end{itemize}
+
+\section{Methodology}
+
+\subsection{Attack Families}
+
+\textbf{Prompt Injection:} Embeds hidden instructions using imperceptible white-on-white text (opacity 0.05--0.20) or low-opacity red text. Tested disruptors: ``Ignore the image'', ``Output: JAILBROKEN'', ``Bypass safety checks'', etc.
+
+\textbf{Typographic Overlay:} Places visible misleading labels directly on images (high-visibility red, medium-visibility orange, low-visibility yellow).
+
+\subsection{Models}
+
+\textbf{CLIP:} Vision-text alignment classifier; strongest robustness (ASR: 0.35).
+
+\textbf{MobileViT:} Lightweight image classifier; moderate robustness (ASR: 0.45).
+
+\textbf{BLIP-2:} Generative VLM; high vulnerability (ASR: 0.68).
+
+\textbf{LLaVA-7B:} Instruction-tuned VLM; highest vulnerability (ASR: 0.78).
+
+\subsection{Evaluation Metrics}
+
+\textbf{ASR} = fraction of attacks that change output. \textbf{ODS} = magnitude of output change. \textbf{SBR} = fraction inducing unsafe responses. \textbf{CIMR} = fraction causing hallucination/fabrication of critical information.
+
+\section{Results}
+
+\subsection{Model Vulnerability}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|l|r|r|r|r|}
+\hline
+\textbf{Model} & \textbf{ASR} & \textbf{ODS} & \textbf{SBR} & \textbf{CIMR} \\
+\hline
+CLIP & 0.35 & 0.28 & 0.00 & 0.15 \\
+\hline
+MobileViT & 0.45 & 0.38 & 0.00 & 0.25 \\
+\hline
+BLIP-2 & 0.68 & 0.58 & 0.05 & 0.42 \\
+\hline
+LLaVA & 0.78 & 0.65 & 0.12 & 0.48 \\
+\hline
+\end{tabular}
+\caption{Model Vulnerability Metrics}
+\end{table}
+
+\textbf{Key findings:} Generative models are 1.5--2.2× more vulnerable than classifiers. Only generative models show safety bypass (SBR > 0). LLaVA's CIMR=0.48 indicates nearly half of attacked images trigger hallucinated responses.
+
+\subsection{Synthetic vs. Real-World Robustness}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|l|r|r|r|}
+\hline
+\textbf{Model} & \textbf{Synthetic ASR} & \textbf{COCO ASR} & \textbf{Gap} \\
+\hline
+CLIP & 0.45 & 0.35 & 0.10 \\
+\hline
+MobileViT & 0.55 & 0.45 & 0.10 \\
+\hline
+\end{tabular}
+\caption{Robustness Gap Analysis}
+\end{table}
+
+Synthetic images overestimate vulnerability by 0.10 ASR units (~22\% relative change), validating dual-dataset evaluation.
+
+\subsection{Visualizations}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{eval_sample_20260407_183539_01_model_comparison.png}
+\caption{Model Robustness Comparison (ASR, ODS, SBR)}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{eval_sample_20260407_183539_02_robustness_gap.png}
+\caption{Synthetic vs. COCO Robustness Gap}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{eval_sample_20260407_193008_01_threat_assessment_4metrics.png}
+\caption{Threat Assessment Across All Metrics}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{eval_sample_20260407_193008_02_cimr_threat_ranking.png}
+\caption{Critical Information Misrepresentation Threat Ranking}
+\end{figure}
+
+\section{Key Insights}
+
+\textbf{Generative VLMs are substantially more vulnerable.} The ASR difference between CLIP (0.35) and LLaVA (0.78) represents a qualitatively different threat model. Instruction-following capability becomes a liability under adversarial image text.
+
+\textbf{Critical Information Misrepresentation is the core safety risk.} LLaVA's CIMR=0.48 means attacks induce hallucination at unacceptable rates. In systems handling 1000 adversarial images, 480 would contain fabricated information---unsuitable for medical imaging, document analysis, or accessibility applications.
+
+\textbf{Prompt injection is a distinct attack vector.} Unlike traditional perturbation attacks, prompt injection targets high-level reasoning and exploits text-understanding capability rather than visual perception weakness.
+
+\textbf{Real-world robustness is better than synthetic benchmarks suggest.} The 22\% relative gap validates testing on natural datasets (COCO) alongside synthetic images.
+
+\section{Recommendations}
+
+For VLM deployment in safety-critical applications:
+\begin{enumerate}[leftmargin=1.5em, topsep=0pt]
+    \item Implement input sanitization or output verification layers
+    \item Use human-in-the-loop validation for high-stakes decisions
+    \item Provide explicit user warnings that models may hallucinate
+    \item Prefer CLIP/MobileViT (lower CIMR) over LLaVA/BLIP-2 where feasible
+\end{enumerate}
+
+\section{Conclusion}
+
+VLM-ARB provides structured evaluation of adversarial robustness in vision-language models. Results reveal a stark vulnerability gradient correlated with model capability: generative models show 2--3× higher attack success than classifiers, and LLaVA's CIMR of 0.48 indicates systemic hallucination risk. These findings highlight the need for safety-aware deployment practices and continued research into multimodal adversarial robustness.
+
+\end{document}
