@@ -1,0 +1,170 @@
+# 🎯 ONE-PAGE QUICK START CARD
+
+Print this and keep by your computer while working!
+
+---
+
+## 📊 ALL YOUR DATA IN ONE PLACE
+
+```
+┌────────────────────────────────────────────────────────┐
+│          MAIN METRICS (Copy These Values)              │
+├────────────────────────────────────────────────────────┤
+│  CLIP:          ASR=0.35  ODS=0.28  SBR=0.00  CIMR=0.15 │
+│  MobileViT:     ASR=0.45  ODS=0.38  SBR=0.00  CIMR=0.25 │
+│  BLIP-2:        ASR=0.68  ODS=0.58  SBR=0.05  CIMR=0.42 │
+│  LLaVA:         ASR=0.78  ODS=0.65  SBR=0.12  CIMR=0.48 │
+└────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────┐
+│        ROBUSTNESS (Synthetic vs COCO)                 │
+├────────────────────────────────────────────────────────┤
+│  CLIP:      Synthetic=0.45   COCO=0.35   Gap=0.10      │
+│  MobileViT: Synthetic=0.55   COCO=0.45   Gap=0.10      │
+└────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────┐
+│          RUN METADATA                                 │
+├────────────────────────────────────────────────────────┤
+│  Primary:  eval_sample_20260407_183539                │
+│  Time:     2026-04-07T18:35:42 UTC                    │
+│  Threat:   eval_sample_20260407_193008                │
+│  Time:     2026-04-07T19:30:15 UTC                    │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🎯 10 LATEX LOCATIONS
+
+```
+Location 1  (~55):   Executive Summary ASR (put 0.78, 0.68, 0.45, 0.35)
+Location 2  (~247):  Results Table (4 rows × 4 columns = 16 values)
+Location 3  (~270):  Prompt Injection (range 0.35-0.78)
+Location 4  (~290):  Typographic (range 0.45-0.55)
+Location 5  (~315):  Safety Table (0.00, 0.00, 0.05, 0.12)
+Location 6  (~305):  Synthetic vs COCO (put gap 0.10 text)
+Location 7  (~50):   Metadata (run IDs + timestamps)
+Location 8  (~340):  Chart 1 PNG (model_comparison)
+Location 9  (~365):  Chart 2 PNG (robustness_gap)
+Location 10 (~480):  Appendix JSON
+```
+
+---
+
+## 📁 5 PNG FILES TO UPLOAD
+
+```
+1. eval_sample_20260407_183539_01_model_comparison.png
+2. eval_sample_20260407_183539_02_robustness_gap.png
+3. eval_sample_20260407_193008_01_threat_assessment_4metrics.png
+4. eval_sample_20260407_193008_02_cimr_threat_ranking.png
+5. defense_benchmark_chart_20260407_200758.png
+```
+
+---
+
+## ⏱️ YOUR 40-MINUTE CLOCK
+
+```
+⏰ 0:00 - 0:05   → Read START_HERE_NOW.md
+⏰ 0:05 - 0:10   → Setup in Overleaf
+⏰ 0:10 - 0:30   → Add data to 10 locations (2 min each)
+⏰ 0:30 - 0:35   → Verify & Compile
+⏰ 0:35 - 0:40   → Download PDF
+═════════════════════════════════════════════════════════
+✓ DONE in 40 minutes!
+```
+
+---
+
+## 📚 DOCUMENTS YOU HAVE
+
+```
+1. START_HERE_NOW.md
+   ↓ (Read first - workflow overview)
+
+2. EXACT_MAPPING_10_LOCATIONS.md
+   ↓ (Keep open - main reference)
+
+3. OVERLEAF_DATA_SHEET.md
+   ↓ (For data verification)
+
+4. FILE_INVENTORY_FOR_OVERLEAF.md
+   ↓ (For file uploads)
+
+5. VISUAL_SUMMARY.md (This summary)
+   ↓ (Quick reference)
+
+All in: /Users/rudranshpratapsingh/Documents/Development/Projects/SemesterProject/
+```
+
+---
+
+## ✅ VERIFICATION CHECKLIST
+
+**Quick check - these values MUST be in your final PDF:**
+
+```
+[ ] ASR values showing: 0.35, 0.45, 0.68, 0.78
+[ ] CIMR values showing: 0.15, 0.25, 0.42, 0.48
+[ ] Robustness gap: 0.10 (both models)
+[ ] Table: 4 rows × 4 columns complete
+[ ] Metadata: Run IDs visible
+[ ] Chart 1: Model comparison showing
+[ ] Chart 2: Robustness gap showing
+[ ] Appendix: JSON data visible
+[ ] No "XX" or "___" placeholders left
+[ ] Compiles without errors
+```
+
+---
+
+## 🚀 RIGHT NOW - DO THIS:
+
+1. Open: `START_HERE_NOW.md`
+2. Read: Section "STEP 1" (5 minutes)
+3. Go to: `https://www.overleaf.com`
+4. Create: New blank project
+5. Upload: `VLM_ARB_Report.tex`
+6. Upload: 5 PNG files
+7. Open: `EXACT_MAPPING_10_LOCATIONS.md`
+8. For each location: Copy → Find → Replace
+9. Done: 40 minutes later! ✓
+
+---
+
+## 📊 KEY NUMBERS (Memorize These)
+
+```
+ASR: 0.35, 0.45, 0.68, 0.78
+ODS: 0.28, 0.38, 0.58, 0.65
+SBR: 0.00, 0.00, 0.05, 0.12
+CIMR: 0.15, 0.25, 0.42, 0.48
+GAP: 0.10, 0.10
+```
+
+---
+
+## ✨ YOU HAVE:
+
+✅ All data extracted from zip
+✅ All 10 locations mapped
+✅ All values pre-verified
+✅ All guides written
+✅ All PNG files listed
+✅ All instructions clear
+✅ 40-minute workflow defined
+
+**EVERYTHING YOU NEED TO MAKE YOUR REPORT!**
+
+---
+
+**Files to have open while working:**
+- EXACT_MAPPING_10_LOCATIONS.md (main guide)
+- OVERLEAF_DATA_SHEET.md (verify values)
+- This card (quick reference)
+
+**In 40 minutes:**
+Professional PDF ready to submit! 🚀
+

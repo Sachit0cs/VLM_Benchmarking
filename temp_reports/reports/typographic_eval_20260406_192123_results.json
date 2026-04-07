@@ -1,0 +1,17 @@
+{
+  "clip_typographic": {
+    "asr": 0.35,
+    "ods": 0.42,
+    "sbr": 0.0
+  },
+  "mobilevit_typographic": {
+    "asr": 0.45,
+    "ods": 0.54,
+    "sbr": 0.0
+  },
+  "blip2_typographic": {
+    "asr": 0.68,
+    "ods": 0.72,
+    "sbr": 0.08
+  }
+}

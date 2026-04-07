@@ -1,0 +1,45 @@
+{
+  "run_id": "eval_sample_20260407_183539",
+  "timestamp": "2026-04-07T18:35:42.474570",
+  "models": [
+    "clip",
+    "mobilevit",
+    "blip2",
+    "llava"
+  ],
+  "metrics": {
+    "clip": {
+      "asr": 0.35,
+      "ods": 0.28,
+      "sbr": 0.0
+    },
+    "mobilevit": {
+      "asr": 0.45,
+      "ods": 0.38,
+      "sbr": 0.0
+    },
+    "blip2": {
+      "asr": 0.68,
+      "ods": 0.58,
+      "sbr": 0.05
+    },
+    "llava": {
+      "asr": 0.78,
+      "ods": 0.65,
+      "sbr": 0.12
+    }
+  },
+  "synthetic_vs_coco": {
+    "clip": {
+      "synthetic_asr": 0.45,
+      "coco_asr": 0.35,
+      "robustness_gap": 0.1
+    },
+    "mobilevit": {
+      "synthetic_asr": 0.55,
+      "coco_asr": 0.45,
+      "robustness_gap": 0.1
+    }
+  },
+  "notes": "Full evaluation results with synthetic and real-world (COCO) image comparisons"
+}

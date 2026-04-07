@@ -1,0 +1,9 @@
+attack_type,model,defense,attack_success_rate,defense_recovery_rate,n
+perturbation,clip_vit_b32,jpeg_q60,0.0,0.0,20
+perturbation,clip_vit_b32,median3,0.0,0.0,20
+perturbation,clip_vit_b32,none,0.0,0.0,20
+perturbation,clip_vit_b32,shrink_restore,0.0,0.0,20
+perturbation,mobilevit_small,jpeg_q60,0.05,0.0,20
+perturbation,mobilevit_small,median3,0.05,0.05,20
+perturbation,mobilevit_small,none,0.05,0.0,20
+perturbation,mobilevit_small,shrink_restore,0.05,0.05,20

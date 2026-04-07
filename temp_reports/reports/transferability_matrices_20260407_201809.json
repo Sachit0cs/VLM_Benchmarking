@@ -1,0 +1,12 @@
+{
+  "perturbation": {
+    "clip_vit_b32": {
+      "clip_vit_b32": 0.0,
+      "mobilevit_small": 0.0
+    },
+    "mobilevit_small": {
+      "clip_vit_b32": 0.0,
+      "mobilevit_small": 1.0
+    }
+  }
+}
